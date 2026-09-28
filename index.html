@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bounty Hunter</title>
+<meta name="description" content="Finds specific, open non-dilutive funding that fits your company, ranks it, and drafts applications for you to review.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+<link rel="stylesheet" href="app.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect width='12' height='12' fill='%23000'/%3E%3Crect x='3' y='3' width='6' height='6' fill='%238A2BE2'/%3E%3Crect x='5' y='5' width='2' height='2' fill='%23B6FF3B'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<!-- SIGN IN -->
+<div class="gate" id="gate" hidden>
+  <div class="panel px">
+    <h1>BOUNTY HUNTER</h1>
+    <p>Finds specific, open grants, prizes and solicitations that fit your company. Ranks them, checks every link, and drafts applications for you to review. It never submits anything for you.</p>
+    <form id="signinForm" class="field">
+      <span>SIGN IN WITH A ONE-TIME EMAIL LINK</span>
+      <input id="email" type="email" required autocomplete="email" placeholder="you@company.com">
+      <div class="row-inline"><button class="btn" type="submit" id="signinBtn"><span class="blink">PRESS START</span> · SEND LINK</button></div>
+      <small id="signinMsg" role="status"></small>
+    </form>
+    <p class="sample">FREE TO USE · DAILY LIMITS APPLY · RESULTS ARE A STARTING POINT, NOT ADVICE</p>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="wrap" id="app" hidden>
+  <header class="marquee px">
+    <div class="logo">
+      <canvas id="sprite" width="12" height="12" aria-hidden="true"></canvas>
+      <div><h1>BOUNTY HUNTER</h1><div class="tag" id="playerTag">FUNDING THAT FITS · NO FAKE LOOT</div></div>
+    </div>
+    <div class="scores" aria-label="Summary">
+      <div class="score"><span class="k">RECOMMENDED</span><span class="v num" id="sRec">00</span></div>
+      <div class="score warn"><span class="k">CLOSING IN 30 DAYS</span><span class="v num" id="sSoon">00</span></div>
+      <div class="score"><span class="k">NEEDS YOU</span><span class="v num" id="sQ">00</span></div>
+      <div class="score"><span class="k">TRACKED</span><span class="v num" id="sAll">00</span></div>
+    </div>
+    <div class="coin">
+      <div class="credits" aria-label="Sweeps left today"><span>SWEEP CREDITS</span><span id="creditPips"></span></div>
+      <button class="btn" id="runBtn"><span class="blink">INSERT COIN</span> · RUN SWEEP</button>
+    </div>
+  </header>
+
+  <nav class="nav" aria-label="Main">
+    <button data-view="opps" aria-current="page">OPPORTUNITIES <span class="n num" id="nOpps">0</span></button>
+    <button data-view="runs">RUN LOG <span class="n num" id="nRuns">0</span></button>
+    <button data-view="questions">QUESTIONS <span class="n alert num" id="nQ">0</span></button>
+    <button data-view="drafts">DRAFTS <span class="n num" id="nD">0</span></button>
+    <button data-view="profile">PROFILE</button>
+  </nav>
+
+  <!-- OPPORTUNITIES -->
+  <section class="view board px" id="view-opps">
+    <div class="board-head">
+      <h2>HIGH SCORES · OPEN CALLS</h2>
+      <div class="filters" role="group" aria-label="Filter">
+        <button aria-pressed="true" data-f="rec">RECOMMENDED</button>
+        <button aria-pressed="false" data-f="all">ALL TIERS</button>
+        <button aria-pressed="false" data-f="human">NEEDS REVIEW</button>
+        <button aria-pressed="false" data-f="short">SHORTLIST</button>
+      </div>
+      <label class="search"><span>FIND</span><input id="q" placeholder="title, funder, id" aria-label="Search opportunities"></label>
+    </div>
+    <form class="row-inline" id="assessForm" style="margin-bottom:14px">
+      <label class="field"><span>ASSESS ONE LINK</span><input id="assessUrl" type="url" placeholder="https://… a specific solicitation, topic or competition page" required></label>
+      <label class="check"><input type="checkbox" id="assessDraft"> also draft it</label>
+      <button class="btn alt" type="submit">ASSESS</button>
+    </form>
+    <div class="cols" aria-hidden="true"><span>RANK</span><span>TIER</span><span>OPPORTUNITY · ID FOUND ON PAGE</span><span>TIME LEFT</span><span>AWARD</span></div>
+    <div id="list"><div class="loading">LOADING…</div></div>
+  </section>
+
+  <!-- RUN LOG -->
+  <section class="view two" id="view-runs" hidden>
+    <div class="panel px">
+      <h2 id="runTitle">LEVEL LOG</h2>
+      <p class="lede">Each step the agents took: plan, act, check, decide. Updates live while a job runs.</p>
+      <ol class="log" id="log"><li><span></span><span></span><span>Pick a run on the right.</span></li></ol>
+    </div>
+    <div class="panel px">
+      <h2>YOUR RUNS</h2>
+      <p class="lede">Jobs start within a minute or two. A sweep usually takes 5–15 minutes.</p>
+      <div class="jobs" id="jobs"></div>
+    </div>
+  </section>
+
+  <!-- QUESTIONS -->
+  <section class="view two" id="view-questions" hidden>
+    <div class="panel px">
+      <h2>PLAYER INPUT</h2>
+      <p class="lede">Facts only you know. Answer once; every later draft that needs the same fact reuses it.</p>
+      <div id="qlist"></div>
+    </div>
+    <div class="panel px">
+      <h2>WHAT HAPPENS NEXT</h2>
+      <p class="lede">Your answers are applied the next time that draft runs. Use “Refill draft” on the draft to do it now.</p>
+      <div class="inv" id="qsummary"></div>
+    </div>
+  </section>
+
+  <!-- DRAFTS -->
+  <section class="view two" id="view-drafts" hidden>
+    <div class="panel px">
+      <h2>INVENTORY</h2>
+      <p class="lede">Drafts built only from your saved facts. Nothing is ever submitted for you.</p>
+      <div class="inv" id="draftList"></div>
+    </div>
+    <div class="panel px">
+      <h2 id="draftTitle">DRAFT</h2>
+      <div class="warnbox">DRAFT ONLY. Review every section, then submit through the funder's portal yourself.</div>
+      <div class="acts" style="margin:0 0 12px"><button class="btn alt" id="refillBtn" hidden>REFILL DRAFT</button></div>
+      <div class="md" id="draftBody"><p style="color:var(--muted)">Pick a draft.</p></div>
+    </div>
+  </section>
+
+  <!-- PROFILE -->
+  <section class="view panel px" id="view-profile" hidden>
+    <h2>PLAYER SETUP</h2>
+    <p class="lede">Describe the company, project or idea to find funding for. This is the only company-specific input the agents use.</p>
+    <form id="profileForm" style="display:grid;gap:16px">
+      <fieldset><legend>ENTITY</legend><div class="formgrid">
+        <label class="field wide"><span>NAME</span><input id="p_name" required maxlength="120"></label>
+        <label class="field"><span>TYPE</span><select id="p_type" required>
+          <option value="c_corp">C-corp</option><option value="s_corp">S-corp</option><option value="llc">LLC</option><option value="partnership">Partnership</option>
+          <option value="sole_prop">Sole proprietor</option><option value="nonprofit">Nonprofit</option><option value="university">University / research institute</option>
+          <option value="individual">Individual</option><option value="government">Government</option><option value="other">Other</option></select></label>
+        <label class="field"><span>WHERE IT'S REGISTERED</span><input id="p_juris" required placeholder="e.g. US-DE, US-CA, CA-ON" maxlength="12"><small>Country code, then state or province.</small></label>
+        <label class="field"><span>TEAM SIZE</span><input id="p_size" type="number" min="0" max="100000"></label>
+        <label class="field"><span>YEAR FOUNDED</span><input id="p_founded" type="number" min="1900" max="2100"></label>
+        <label class="field"><span>STAGE</span><input id="p_stage" placeholder="e.g. idea, pre-seed, seed" maxlength="40"></label>
+        <label class="check"><input type="checkbox" id="p_small" checked> Small business</label>
+      </div></fieldset>
+      <fieldset><legend>WHAT YOU'RE BUILDING</legend><div class="formgrid">
+        <label class="field wide"><span>ONE-LINER</span><input id="p_one" required maxlength="200" placeholder="What it does, for whom"></label>
+        <label class="field wide"><span>TECHNOLOGY</span><textarea id="p_tech" maxlength="800"></textarea></label>
+        <label class="field wide"><span>PROBLEM IT SOLVES</span><textarea id="p_problem" maxlength="800"></textarea></label>
+        <label class="field wide"><span>STAGE OF DEVELOPMENT</span><input id="p_dev" maxlength="200" placeholder="e.g. bench prototype (TRL 4)"></label>
+        <label class="field wide"><span>CUSTOMERS</span><input id="p_customers" maxlength="300"></label>
+      </div></fieldset>
+      <fieldset><legend>WHERE TO LOOK</legend><div class="formgrid">
+        <label class="field"><span>FIELDS (VERTICALS)</span><input id="p_verticals" required placeholder="water, advanced materials" maxlength="200"><small>Comma-separated.</small></label>
+        <label class="field"><span>EXTRA SEARCH TERMS</span><input id="p_keywords" placeholder="optional" maxlength="200"></label>
+        <label class="field"><span>ELIGIBLE REGIONS</span><input id="p_geos" required placeholder="US, US-CA" maxlength="100"><small>“US” covers every state; add a state to include state programs.</small></label>
+        <label class="field"><span>AWARD RANGE (USD)</span><span class="row-inline" style="gap:8px"><input id="p_min" type="number" min="0" placeholder="min" aria-label="Minimum award"><input id="p_max" type="number" min="0" placeholder="max" aria-label="Maximum award"></span></label>
+        <label class="check wide"><input type="checkbox" id="p_equity"> Equity-taking programs are OK</label>
+      </div></fieldset>
+      <div class="row-inline"><button class="btn" type="submit">SAVE PROFILE</button><span id="profileMsg" role="status"></span></div>
+    </form>
+    <div class="footer" style="margin-top:20px">
+      <span id="whoami"></span>
+      <span class="row-inline" style="gap:14px"><button class="linkbtn" id="signoutBtn">Sign out</button><button class="linkbtn" id="deleteBtn">Delete all my data</button></span>
+    </div>
+    <div id="deleteConfirm" hidden style="margin-top:12px" class="warnbox">This permanently deletes your profile, results, questions and drafts. <button class="btn danger" id="deleteYes">DELETE EVERYTHING</button> <button class="linkbtn" id="deleteNo">Cancel</button></div>
+  </section>
+
+  <div class="footer">
+    <span>Links are checked against the page the agent actually opened. Always confirm eligibility and deadlines with the funder.</span>
+    <span>Nothing is submitted on your behalf.</span>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
