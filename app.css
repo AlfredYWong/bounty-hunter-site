@@ -191,3 +191,5 @@ legend { font: 10px/1 var(--arcade); color: var(--lime); padding: 0 8px; }
 .danger:hover { background: var(--red); color: var(--black); }
 .loading { font: 10px/1.6 var(--arcade); color: var(--muted); padding: 24px 10px; text-align: center; }
 @media (max-width: 700px) { .formgrid { grid-template-columns: 1fr; } .job { grid-template-columns: 1fr; } }
+
+[hidden] { display: none !important; }
