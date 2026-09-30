@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="app.css?v=6">
+<link rel="stylesheet" href="app.css?v=7">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect width='12' height='12' fill='%23000'/%3E%3Crect x='3' y='3' width='6' height='6' fill='%238A2BE2'/%3E%3Crect x='5' y='5' width='2' height='2' fill='%23B6FF3B'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -112,7 +112,7 @@
     <div class="panel px">
       <h2 id="draftTitle">DRAFT</h2>
       <div class="warnbox">DRAFT ONLY. Review every section, then submit through the funder's portal yourself.</div>
-      <div class="acts" style="margin:0 0 12px"><button class="btn alt" id="refillBtn" hidden>REFILL DRAFT</button></div>
+      <div class="acts" style="margin:0 0 12px"><button class="btn alt" id="refillBtn" hidden>REFILL DRAFT</button><button class="btn danger" id="deleteDraftBtn" hidden>DELETE DRAFT</button></div>
       <div class="md" id="draftBody"><p style="color:var(--muted)">Pick a draft.</p></div>
     </div>
   </section>
@@ -152,8 +152,9 @@
     </form>
     <div class="footer" style="margin-top:20px">
       <span id="whoami"></span>
-      <span class="row-inline" style="gap:14px"><button class="linkbtn" id="signoutBtn">Sign out</button><button class="linkbtn" id="deleteBtn">Delete all my data</button></span>
+      <span class="row-inline" style="gap:14px"><button class="linkbtn" id="signoutBtn">Sign out</button><button class="linkbtn" id="clearResultsBtn">Delete all results (keep profile)</button><button class="linkbtn" id="deleteBtn">Delete all my data</button></span>
     </div>
+    <div id="clearConfirm" hidden style="margin-top:12px" class="warnbox">This deletes every opportunity, draft, question and finished run, and stops anything waiting. Your profile stays. <button class="btn danger" id="clearYes">DELETE ALL RESULTS</button> <button class="linkbtn" id="clearNo">Cancel</button></div>
     <div id="deleteConfirm" hidden style="margin-top:12px" class="warnbox">This permanently deletes your profile, results, questions and drafts. <button class="btn danger" id="deleteYes">DELETE EVERYTHING</button> <button class="linkbtn" id="deleteNo">Cancel</button></div>
   </section>
 
@@ -165,7 +166,7 @@
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-<script src="config.js?v=6"></script>
-<script src="app.js?v=6"></script>
+<script src="config.js?v=7"></script>
+<script src="app.js?v=7"></script>
 </body>
 </html>

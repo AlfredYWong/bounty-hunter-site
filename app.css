@@ -193,3 +193,11 @@ legend { font: 10px/1 var(--arcade); color: var(--lime); padding: 0 8px; }
 @media (max-width: 700px) { .formgrid { grid-template-columns: 1fr; } .job { grid-template-columns: 1fr; } }
 
 [hidden] { display: none !important; }
+
+/* job controls */
+.jobrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+.jobctl { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.btn.mini { font-size: 9px; padding: 8px 9px; box-shadow: 3px 3px 0 var(--panel-2); }
+.st.cancelled { color: var(--muted); }
+.btn[data-armed] { background: var(--red); color: var(--black); border-color: var(--red); text-shadow: none; }
+@media (max-width: 700px) { .jobrow { grid-template-columns: 1fr; } .jobctl { justify-content: flex-start; } }

@@ -132,7 +132,7 @@ function renderList() {
         <div><h3>WHY THIS TIER</h3><ul class="why">${why.map(w => `<li><span class="k ${/fails|off-profile|not |capped|passed|takes equity/i.test(w) ? "no" : /ambiguous|weak|unclear/i.test(w) ? "meh" : "ok"}">${/fails|off-profile|not |capped|passed|takes equity/i.test(w) ? "✕" : /ambiguous|weak|unclear/i.test(w) ? "~" : "✓"}</span><span>${esc(w)}</span></li>`).join("")}
           ${r.fit_reason ? `<li><span class="k ok">»</span><span>${esc(r.fit_reason)}</span></li>` : ""}</ul>
           <div class="acts"><button class="btn" data-act="draft" data-id="${esc(o.id)}">DRAFT IT</button>
-            <button class="btn alt" data-act="shortlisted" data-id="${esc(o.id)}">SHORTLIST</button><button class="btn alt" data-act="skipped" data-id="${esc(o.id)}">NOT FOR US</button></div></div>
+            <button class="btn alt" data-act="shortlisted" data-id="${esc(o.id)}">SHORTLIST</button><button class="btn alt" data-act="skipped" data-id="${esc(o.id)}">NOT FOR US</button><button class="btn danger" data-del="opportunity" data-id="${esc(o.id)}">DELETE</button></div></div>
         <div><h3>ELIGIBILITY</h3><p style="margin:0 0 8px">${esc(r.eligibility_summary)}</p>
           <div class="chips">${flags.map(([t, k, p]) => `<span class="chip ${k}">${esc(t)}${p ? " · " + esc(p) : ""}</span>`).join("")}</div>
           <div class="src"><span>${r.source_agent?.startsWith("main:") ? "Read through the " + esc(r.source_agent.slice(5).replace("_", ".")) + " API" : "Found by the web scout and checked against the page it opened"}</span>
@@ -142,6 +142,8 @@ function renderList() {
   }).join("");
 }
 $("list").addEventListener("click", async e => {
+  const del = e.target.closest("[data-del]");
+  if (del) return confirmThen(del, () => deleteItem("opportunity", del.dataset.id, "Opportunity deleted, with its draft and questions"));
   const act = e.target.closest("[data-act]");
   if (act) {
     const id = act.dataset.id;
@@ -176,14 +178,54 @@ $("assessForm").addEventListener("submit", e => {
 });
 const KIND = { sweep: "SWEEP", assess: "ASSESS", autofill: "DRAFT" };
 function renderJobs() {
-  $("jobs").innerHTML = S.jobs.length ? S.jobs.map(j => `<button class="job" data-job="${esc(j.id)}" aria-pressed="${j.id === S.selectedJob}">
-      <span class="st ${esc(j.status)}">${esc(j.status.toUpperCase())}</span>
-      <span><span>${KIND[j.kind] || esc(j.kind)} · ${new Date(j.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
-        <span class="meta" style="margin:0">${esc(j.summary || j.error || (j.kind === "assess" ? j.params?.url : "") || "")}</span></span>
-      <span class="num" style="color:var(--muted)">${j.model_calls ? j.model_calls + " calls" : ""}</span></button>`).join("")
-    : '<div class="empty">NO RUNS YET</div>';
+  const queued = S.jobs.filter(j => j.status === "queued").sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+  const others = S.jobs.filter(j => j.status !== "queued");
+  const ordered = [...others.filter(j => j.status === "running"), ...queued, ...others.filter(j => j.status !== "running")];
+  $("jobs").innerHTML = ordered.length ? ordered.map(j => {
+    const qi = queued.indexOf(j);
+    const ctl = j.status === "queued"
+      ? `${qi > 0 ? `<button class="btn alt mini" data-move="up" data-id="${esc(j.id)}" aria-label="Move up">▲</button>` : ""}${qi < queued.length - 1 ? `<button class="btn alt mini" data-move="down" data-id="${esc(j.id)}" aria-label="Move down">▼</button>` : ""}<button class="btn danger mini" data-stop="${esc(j.id)}">STOP</button>`
+      : j.status === "running"
+        ? (j.cancel_requested ? `<span class="st running">STOPPING…</span>` : `<button class="btn danger mini" data-stop="${esc(j.id)}">STOP</button>`)
+        : `<button class="btn alt mini" data-del="job" data-id="${esc(j.id)}">DELETE</button>`;
+    return `<div class="jobrow" aria-current="${j.id === S.selectedJob}">
+      <button class="job" data-job="${esc(j.id)}" aria-pressed="${j.id === S.selectedJob}">
+        <span class="st ${esc(j.status)}">${esc(j.status.toUpperCase())}${j.status === "queued" ? ` #${qi + 1}` : ""}</span>
+        <span><span>${KIND[j.kind] || esc(j.kind)} · ${new Date(j.created_at).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+          <span class="meta" style="margin:0">${esc(j.summary || j.error || (j.kind === "assess" ? j.params?.url : "") || "")}</span></span>
+        <span class="num" style="color:var(--muted)">${j.model_calls ? j.model_calls + " calls" : ""}</span></button>
+      <div class="jobctl">${ctl}</div></div>`;
+  }).join("") : '<div class="empty">NO RUNS YET</div>';
 }
-$("jobs").addEventListener("click", e => { const b = e.target.closest("[data-job]"); if (!b) return; S.selectedJob = b.dataset.job; renderJobs(); loadEvents(); });
+$("jobs").addEventListener("click", async e => {
+  const mv = e.target.closest("[data-move]"), st = e.target.closest("[data-stop]"), del = e.target.closest("[data-del]");
+  if (mv) { const { error } = await sb.rpc("move_job", { p_job: mv.dataset.id, p_dir: mv.dataset.move }); if (error) return toast(error.message); return refreshJobs(); }
+  if (st) {
+    const { data, error } = await sb.rpc("cancel_job", { p_job: st.dataset.stop }); if (error) return toast(error.message);
+    toast(data?.status === "cancelled" ? "Stopped." : "Stopping. The agent finishes its current step first; results so far are kept.");
+    return refreshJobs();
+  }
+  if (del) return confirmThen(del, () => deleteItem("job", del.dataset.id, "Run deleted"));
+  const b = e.target.closest("[data-job]"); if (!b) return; S.selectedJob = b.dataset.job; renderJobs(); loadEvents();
+});
+async function refreshJobs() {
+  const { data } = await sb.from("jobs").select("*").order("created_at", { ascending: false }).limit(15);
+  S.jobs = data || S.jobs; renderJobs(); renderHeader(); managePolling();
+}
+
+/* two-click confirm for anything destructive */
+function confirmThen(btn, fn) {
+  if (btn.dataset.armed) { delete btn.dataset.armed; clearTimeout(btn._t); return fn(); }
+  btn.dataset.armed = "1"; btn._label = btn._label || btn.textContent; btn.textContent = "SURE? CLICK AGAIN";
+  btn._t = setTimeout(() => { delete btn.dataset.armed; btn.textContent = btn._label; }, 4000);
+}
+async function deleteItem(kind, id, msg) {
+  const { error } = await sb.rpc("delete_item", { p_kind: kind, p_id: id });
+  if (error) return toast(error.message);
+  if (kind === "job" && S.selectedJob === id) S.selectedJob = null;
+  if (kind === "draft" && S.selectedDraft === id) S.selectedDraft = null;
+  toast(msg); await loadAll();
+}
 async function loadEvents() {
   const j = S.jobs.find(x => x.id === S.selectedJob); if (!j) return;
   $("runTitle").textContent = `LEVEL LOG · ${KIND[j.kind] || j.kind} · ${j.status.toUpperCase()}`;
@@ -215,13 +257,15 @@ function renderQuestions() {
   $("qlist").innerHTML = qs.length ? qs.map(q => `<div class="q"><div class="meta"><span class="id">${esc(q.id)}</span><span>${esc(q.section || "General")}</span></div>
       <label for="a-${esc(q.id)}">${esc(q.question)}</label>
       ${q.status === "answered" ? `<span class="saved">SAVED · APPLIED ON THE NEXT DRAFT RUN</span>`
-        : `<textarea id="a-${esc(q.id)}" maxlength="2000" placeholder="> your answer"></textarea><div><button class="btn" data-q="${esc(q.id)}">SAVE</button></div>`}</div>`).join("")
+        : `<textarea id="a-${esc(q.id)}" maxlength="2000" placeholder="> your answer"></textarea><div class="row-inline"><button class="btn" data-q="${esc(q.id)}">SAVE</button><button class="btn danger" data-del="question" data-id="${esc(q.id)}">DELETE</button></div>`}</div>`).join("")
     : '<div class="empty">NO QUESTIONS · ALL CLEAR</div>';
   const applied = S.questions.filter(q => q.status === "applied");
   $("qsummary").innerHTML = applied.length ? applied.map(q => `<div class="slot"><div><div>${esc(q.field || q.id)}</div><div class="note">${esc(q.answer || "")}</div></div><span class="st" style="color:var(--lime)">IN MEMORY</span></div>`).join("")
     : '<p style="margin:0;color:var(--muted)">Answers you give show up here once a draft run has used them.</p>';
 }
 $("qlist").addEventListener("click", async e => {
+  const del = e.target.closest("[data-del]");
+  if (del) return confirmThen(del, () => deleteItem("question", del.dataset.id, "Question deleted"));
   const b = e.target.closest("[data-q]"); if (!b) return;
   const id = b.dataset.q, v = $("a-" + id).value.trim();
   if (!v) return toast("Type an answer first");
@@ -246,11 +290,13 @@ function renderDrafts() {
 $("draftList").addEventListener("click", e => { const b = e.target.closest("[data-draft]"); if (!b) return; S.selectedDraft = b.dataset.draft; renderDrafts(); });
 function showDraft() {
   const d = S.drafts.find(x => x.op_id === S.selectedDraft);
-  $("refillBtn").hidden = !d;
+  $("refillBtn").hidden = !d; $("deleteDraftBtn").hidden = !d;
+  if (!d) { $("draftTitle").textContent = "DRAFT"; $("draftBody").innerHTML = '<p style="color:var(--muted)">Pick a draft.</p>'; }
   if (!d) return;
   $("draftTitle").textContent = `DRAFT v${d.version}`;
   $("draftBody").innerHTML = mdToHtml(d.markdown || "");
 }
+$("deleteDraftBtn").addEventListener("click", e => S.selectedDraft && confirmThen(e.currentTarget, () => deleteItem("draft", S.selectedDraft, "Draft deleted")));
 $("refillBtn").addEventListener("click", () => S.selectedDraft && enqueue("autofill", { op_id: S.selectedDraft }, "Refilling the draft with your answers."));
 function mdToHtml(md) {
   const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>").replace(/`(.+?)`/g, "<code>$1</code>").replace(/_(.+?)_/g, "<em>$1</em>")
@@ -292,6 +338,14 @@ $("profileForm").addEventListener("submit", async e => {
   S.profile = profile; renderHeader(); msg("profileMsg", "Saved. Run a sweep to find opportunities.");
 });
 function msg(id, t, bad) { $(id).className = bad ? "err" : "okmsg"; $(id).textContent = t; }
+$("clearResultsBtn").addEventListener("click", () => { $("clearConfirm").hidden = false; });
+$("clearNo").addEventListener("click", () => { $("clearConfirm").hidden = true; });
+$("clearYes").addEventListener("click", async () => {
+  const { error } = await sb.rpc("delete_my_results");
+  if (error) return toast(`Couldn't delete: ${error.message}`);
+  $("clearConfirm").hidden = true; S.selectedJob = null; S.selectedDraft = null;
+  toast("All results deleted. Your profile is kept."); await loadAll();
+});
 $("deleteBtn").addEventListener("click", () => { $("deleteConfirm").hidden = false; });
 $("deleteNo").addEventListener("click", () => { $("deleteConfirm").hidden = true; });
 $("deleteYes").addEventListener("click", async () => {
