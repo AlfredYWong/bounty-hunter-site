@@ -22,7 +22,7 @@ const FLAG_LABEL = {
 };
 
 const S = { user: null, profile: null, opps: [], questions: [], drafts: [], jobs: [], usage: null,
-            filter: "rec", query: "", selectedJob: null, selectedDraft: null, pollTimer: null };
+            filter: "all", query: "", selectedJob: null, selectedDraft: null, pollTimer: null };
 
 /* ─── auth ─────────────────────────────────────────────────────────────────── */
 $("signinForm").addEventListener("submit", async e => {
@@ -89,13 +89,11 @@ function daysLeft(d) {
   const t = Date.parse(d + "T23:59:59Z"); return Number.isNaN(t) ? null : Math.ceil((t - Date.now()) / 864e5);
 }
 function renderHeader() {
-  const rec = S.opps.filter(isRecommended), soon = S.opps.filter(o => { const n = daysLeft(o.deadline); return n !== null && n >= 0 && n <= 30 && o.tier !== "least"; });
+  const rec = S.opps.filter(isRecommended);
   const openQ = S.questions.filter(q => q.status === "open");
-  $("sRec").textContent = pad(rec.length); $("sSoon").textContent = pad(soon.length); $("sQ").textContent = pad(openQ.length); $("sAll").textContent = pad(S.opps.length);
+  $("sRec").textContent = pad(rec.length); $("sQ").textContent = pad(openQ.length); $("sAll").textContent = pad(S.opps.length);
   $("nOpps").textContent = S.opps.length; $("nRuns").textContent = S.jobs.length; $("nQ").textContent = openQ.length; $("nD").textContent = S.drafts.length;
   $("playerTag").textContent = S.profile?.entity?.name ? `PLAYER: ${S.profile.entity.name}`.toUpperCase() : "FUNDING THAT FITS · NO FAKE LOOT";
-  const lim = S.usage?.limits?.sweep ?? 2, used = S.usage?.used?.sweep ?? 0;
-  $("creditPips").innerHTML = Array.from({ length: lim }, (_, i) => `<i class="${i < lim - used ? "" : "used"}"></i>`).join("");
   const busy = S.jobs.some(j => j.status === "queued" || j.status === "running");
   $("runBtn").disabled = busy;
   $("runBtn").innerHTML = busy ? "JOB RUNNING…" : '<span class="blink">INSERT COIN</span> · RUN SWEEP';
@@ -115,28 +113,25 @@ function renderList() {
   }).sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || String(a.deadline).localeCompare(String(b.deadline)));
   const el = $("list");
   if (!S.opps.length) { el.innerHTML = `<div class="empty">NO OPPORTUNITIES YET · ${S.profile?.entity ? "RUN A SWEEP OR ASSESS A LINK" : "SET UP YOUR PROFILE FIRST"}</div>`; return; }
-  if (!rows.length) { el.innerHTML = '<div class="empty">NOTHING HERE · TRY ALL TIERS</div>'; return; }
+  if (!rows.length) { el.innerHTML = '<div class="empty">NOTHING IN THIS FILTER · TRY ALL</div>'; return; }
   el.innerHTML = rows.map((o, i) => {
     const r = o.row || {}, n = daysLeft(o.deadline), soon = n !== null && n <= 30;
-    const on = n === null ? 10 : Math.max(0, Math.min(10, Math.round(n / 36.5)));
-    const pips = Array.from({ length: 10 }, (_, k) => `<i class="${k < on ? "on" : ""}"></i>`).join("");
     const due = n === null ? (o.deadline === "rolling" ? "ROLLING" : "NOT STATED") : n < 0 ? "CLOSED" : `${n} DAY${n === 1 ? "" : "S"}`;
     const why = String(r.tier_rationale || "").split(";").map(s => s.trim()).filter(Boolean);
     const flags = (r.eligibility_flags || []).map(f => FLAG_LABEL[f.split(":")[0]] ? [...FLAG_LABEL[f.split(":")[0]], f.split(":")[1]] : [f, ""]);
-    const canDraft = o.tier === "most" || o.tier === "more";
     return `<div class="row" aria-expanded="false">
       <button class="row-head" aria-controls="rb${i}">
         <span class="rank num">${pad(i + 1)}</span>
         <span class="tier t-${esc(o.tier)}"><span class="stars" aria-hidden="true">${STARS[o.tier] || ""}</span><span>${esc(String(o.tier || "").toUpperCase())}</span></span>
         <span><span class="name">${esc(r.title)}</span>
           <span class="meta">${r.opportunity_id ? `<span class="id" title="Found on the cited page"><b>✓</b> ${esc(r.opportunity_id)}</span>` : ""}<span>${esc(r.funder)}</span>${o.status && o.status !== "new" ? `<span class="chip warn">${esc(o.status.replace("_", " "))}</span>` : ""}</span></span>
-        <span class="due${soon ? " soon" : ""}"><span class="d num">${due}</span><span class="bar" aria-hidden="true">${pips}</span><span class="date num">${esc(o.deadline)}</span></span>
+        <span class="due${soon ? " soon" : ""}"><span class="d num">${due}</span><span class="date num">${esc(o.deadline)}</span></span>
         <span class="prize">${esc(r.award_amount || "—")}</span>
       </button>
       <div class="row-body" id="rb${i}" hidden>
         <div><h3>WHY THIS TIER</h3><ul class="why">${why.map(w => `<li><span class="k ${/fails|off-profile|not |capped|passed|takes equity/i.test(w) ? "no" : /ambiguous|weak|unclear/i.test(w) ? "meh" : "ok"}">${/fails|off-profile|not |capped|passed|takes equity/i.test(w) ? "✕" : /ambiguous|weak|unclear/i.test(w) ? "~" : "✓"}</span><span>${esc(w)}</span></li>`).join("")}
           ${r.fit_reason ? `<li><span class="k ok">»</span><span>${esc(r.fit_reason)}</span></li>` : ""}</ul>
-          <div class="acts">${canDraft ? `<button class="btn" data-act="draft" data-id="${esc(o.id)}">DRAFT IT</button>` : ""}
+          <div class="acts"><button class="btn" data-act="draft" data-id="${esc(o.id)}">DRAFT IT</button>
             <button class="btn alt" data-act="shortlisted" data-id="${esc(o.id)}">SHORTLIST</button><button class="btn alt" data-act="skipped" data-id="${esc(o.id)}">NOT FOR US</button></div></div>
         <div><h3>ELIGIBILITY</h3><p style="margin:0 0 8px">${esc(r.eligibility_summary)}</p>
           <div class="chips">${flags.map(([t, k, p]) => `<span class="chip ${k}">${esc(t)}${p ? " · " + esc(p) : ""}</span>`).join("")}</div>

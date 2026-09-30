@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="app.css?v=5">
+<link rel="stylesheet" href="app.css?v=6">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect width='12' height='12' fill='%23000'/%3E%3Crect x='3' y='3' width='6' height='6' fill='%238A2BE2'/%3E%3Crect x='5' y='5' width='2' height='2' fill='%23B6FF3B'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -37,12 +37,10 @@
     </div>
     <div class="scores" aria-label="Summary">
       <div class="score"><span class="k">RECOMMENDED</span><span class="v num" id="sRec">00</span></div>
-      <div class="score warn"><span class="k">CLOSING IN 30 DAYS</span><span class="v num" id="sSoon">00</span></div>
       <div class="score"><span class="k">NEEDS YOU</span><span class="v num" id="sQ">00</span></div>
       <div class="score"><span class="k">TRACKED</span><span class="v num" id="sAll">00</span></div>
     </div>
     <div class="coin">
-      <div class="credits" aria-label="Sweeps left today"><span>SWEEP CREDITS</span><span id="creditPips"></span></div>
       <button class="btn" id="runBtn"><span class="blink">INSERT COIN</span> · RUN SWEEP</button>
     </div>
   </header>
@@ -60,8 +58,8 @@
     <div class="board-head">
       <h2>HIGH SCORES · OPEN CALLS</h2>
       <div class="filters" role="group" aria-label="Filter">
-        <button aria-pressed="true" data-f="rec">RECOMMENDED</button>
-        <button aria-pressed="false" data-f="all">ALL TIERS</button>
+        <button aria-pressed="true" data-f="all">ALL</button>
+        <button aria-pressed="false" data-f="rec">RECOMMENDED</button>
         <button aria-pressed="false" data-f="human">NEEDS REVIEW</button>
         <button aria-pressed="false" data-f="short">SHORTLIST</button>
       </div>
@@ -167,7 +165,7 @@
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-<script src="config.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
