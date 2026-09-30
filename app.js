@@ -5,7 +5,8 @@
 
 const cfg = window.BH_CONFIG;
 const sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "pkce" },
+  // implicit flow: the emailed link works even if opened in another browser or a mail app's viewer
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: "implicit" },
 });
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -33,13 +34,24 @@ $("signinForm").addEventListener("submit", async e => {
   $("signinMsg").className = error ? "err" : "okmsg";
   $("signinMsg").textContent = error ? `Couldn't send the link: ${error.message}` : "Check your inbox and click the link to sign in. You can close this tab.";
 });
+function showLinkError() {
+  const p = new URLSearchParams(location.hash.replace(/^#/, "") || location.search);
+  const err = p.get("error_description") || p.get("error");
+  if (!err) return;
+  $("signinMsg").className = "err";
+  $("signinMsg").textContent = `That sign-in link didn't work: ${err.replace(/\+/g, " ")}. Request a new link below; links expire after one use.`;
+  history.replaceState(null, "", location.pathname);
+}
 sb.auth.onAuthStateChange((_evt, session) => setSession(session));
 sb.auth.getSession().then(({ data }) => setSession(data.session));
 
+let authReady = false;
 function setSession(session) {
   const user = session?.user || null;
-  if (user?.id === S.user?.id) return;
+  if (authReady && user?.id === S.user?.id) return;   // first call always renders something
+  authReady = true;
   S.user = user;
+  if (!user) showLinkError();
   $("gate").hidden = !!user; $("app").hidden = !user;
   if (user) { $("whoami").textContent = `Signed in as ${user.email}`; loadAll(true); } else stopPolling();
 }
