@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
-<link rel="stylesheet" href="app.css?v=7">
+<link rel="stylesheet" href="app.css?v=8">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Crect width='12' height='12' fill='%23000'/%3E%3Crect x='3' y='3' width='6' height='6' fill='%238A2BE2'/%3E%3Crect x='5' y='5' width='2' height='2' fill='%23B6FF3B'/%3E%3C/svg%3E">
 </head>
 <body>
@@ -62,6 +62,13 @@
         <button aria-pressed="false" data-f="rec">RECOMMENDED</button>
         <button aria-pressed="false" data-f="human">NEEDS REVIEW</button>
         <button aria-pressed="false" data-f="short">SHORTLIST</button>
+      </div>
+      <div class="filters" role="group" aria-label="Type">
+        <button aria-pressed="true" data-t="any">ANY TYPE</button>
+        <button aria-pressed="false" data-t="funding">GRANTS</button>
+        <button aria-pressed="false" data-t="hackathon">HACKATHONS</button>
+        <button aria-pressed="false" data-t="prize_challenge">PRIZES</button>
+        <button aria-pressed="false" data-t="pitch_competition">PITCH</button>
       </div>
       <label class="search"><span>FIND</span><input id="q" placeholder="title, funder, id" aria-label="Search opportunities"></label>
     </div>
@@ -141,6 +148,10 @@
         <label class="field wide"><span>STAGE OF DEVELOPMENT</span><input id="p_dev" maxlength="200" placeholder="e.g. bench prototype (TRL 4)"></label>
         <label class="field wide"><span>CUSTOMERS</span><input id="p_customers" maxlength="300"></label>
       </div></fieldset>
+      <fieldset><legend>PRIZE MONEY</legend><div class="formgrid">
+        <label class="field"><span>EVENT FORMAT</span><select id="p_format"><option value="in_person">In person only</option><option value="online">Online only</option><option value="both">Both</option></select><small>Applies to hackathons and pitch competitions. Remote-submission prize challenges are always included.</small></label>
+        <label class="field"><span>MINIMUM CASH PRIZE (USD)</span><input id="p_minprize" type="number" min="0" placeholder="0"><small>Non-cash prizes are never shown.</small></label>
+      </div></fieldset>
       <fieldset><legend>WHERE TO LOOK</legend><div class="formgrid">
         <label class="field"><span>FIELDS (VERTICALS)</span><input id="p_verticals" required placeholder="water, advanced materials" maxlength="200"><small>Comma-separated.</small></label>
         <label class="field"><span>EXTRA SEARCH TERMS</span><input id="p_keywords" placeholder="optional" maxlength="200"></label>
@@ -166,7 +177,7 @@
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.117.2/dist/umd/supabase.js"></script>
-<script src="config.js?v=7"></script>
-<script src="app.js?v=7"></script>
+<script src="config.js?v=8"></script>
+<script src="app.js?v=8"></script>
 </body>
 </html>

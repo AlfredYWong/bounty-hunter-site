@@ -12,6 +12,7 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const safeUrl = u => (/^https?:\/\//i.test(String(u || "")) ? String(u) : "#");
 const TIERS = ["most", "more", "less", "least", "unscored"];
+const TYPE_LABEL = { hackathon: "HACKATHON", prize_challenge: "PRIZE", pitch_competition: "PITCH" };
 const STARS = { most: "★★★★", more: "★★★☆", less: "★★☆☆", least: "★☆☆☆", unscored: "☆☆☆☆" };
 const FLAG_LABEL = {
   us_entity_required: ["US entity", ""], small_business_required: ["Small business", "good"], for_profit_required: ["For-profit", "good"],
@@ -22,7 +23,7 @@ const FLAG_LABEL = {
 };
 
 const S = { user: null, profile: null, opps: [], questions: [], drafts: [], jobs: [], usage: null,
-            filter: "all", query: "", selectedJob: null, selectedDraft: null, pollTimer: null };
+            filter: "all", type: "any", query: "", selectedJob: null, selectedDraft: null, pollTimer: null };
 
 /* ─── auth ─────────────────────────────────────────────────────────────────── */
 $("signinForm").addEventListener("submit", async e => {
@@ -109,6 +110,7 @@ function renderList() {
     if (S.filter === "short" && !["shortlisted", "drafting"].includes(o.status)) return false;
     if (S.filter === "all" && o.status === "skipped") return false;
     const r = o.row || {};
+    if (S.type !== "any" && (r.opportunity_type || "funding") !== S.type) return false;
     return !q || `${r.title} ${r.funder} ${r.opportunity_id || ""}`.toLowerCase().includes(q);
   }).sort((a, b) => TIERS.indexOf(a.tier) - TIERS.indexOf(b.tier) || String(a.deadline).localeCompare(String(b.deadline)));
   const el = $("list");
@@ -124,7 +126,7 @@ function renderList() {
         <span class="rank num">${pad(i + 1)}</span>
         <span class="tier t-${esc(o.tier)}"><span class="stars" aria-hidden="true">${STARS[o.tier] || ""}</span><span>${esc(String(o.tier || "").toUpperCase())}</span></span>
         <span><span class="name">${esc(r.title)}</span>
-          <span class="meta">${r.opportunity_id ? `<span class="id" title="Found on the cited page"><b>✓</b> ${esc(r.opportunity_id)}</span>` : ""}<span>${esc(r.funder)}</span>${o.status && o.status !== "new" ? `<span class="chip warn">${esc(o.status.replace("_", " "))}</span>` : ""}</span></span>
+          <span class="meta">${TYPE_LABEL[r.opportunity_type] ? `<span class="chip">${TYPE_LABEL[r.opportunity_type]}</span>` : ""}${(r.eligibility_flags || []).includes("student_only") ? '<span class="chip warn">STUDENT-ONLY</span>' : ""}${r.opportunity_id ? `<span class="id" title="Found on the cited page"><b>✓</b> ${esc(r.opportunity_id)}</span>` : ""}<span>${esc(r.funder)}</span>${r.event_format === "in_person" && r.location ? `<span>IN PERSON · ${esc(r.location)}</span>` : ""}${o.status && o.status !== "new" ? `<span class="chip warn">${esc(o.status.replace("_", " "))}</span>` : ""}</span></span>
         <span class="due${soon ? " soon" : ""}"><span class="d num">${due}</span><span class="date num">${esc(o.deadline)}</span></span>
         <span class="prize">${esc(r.award_amount || "—")}</span>
       </button>
@@ -158,9 +160,13 @@ $("list").addEventListener("click", async e => {
   const row = head.parentElement, body = row.querySelector(".row-body"), open = row.getAttribute("aria-expanded") === "true";
   row.setAttribute("aria-expanded", String(!open)); body.hidden = open;
 });
-document.querySelectorAll(".filters button").forEach(b => b.addEventListener("click", () => {
-  document.querySelectorAll(".filters button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+document.querySelectorAll(".filters button[data-f]").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".filters button[data-f]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
   S.filter = b.dataset.f; renderList();
+}));
+document.querySelectorAll(".filters button[data-t]").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll(".filters button[data-t]").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+  S.type = b.dataset.t; renderList();
 }));
 $("q").addEventListener("input", e => { S.query = e.target.value; renderList(); });
 
@@ -320,6 +326,7 @@ function fillProfile() {
   set("p_dev", o.stage_of_development); set("p_customers", m.customers); set("p_verticals", (p.verticals || []).join(", "));
   set("p_keywords", (p.keywords || []).join(", ")); set("p_geos", (p.geographies || []).join(", ")); set("p_min", f.target_min); set("p_max", f.target_max);
   set("p_equity", f.accepts_equity);
+  const z = p.prizes || {}; set("p_format", z.event_format || "in_person"); set("p_minprize", z.min_prize_usd);
 }
 $("profileForm").addEventListener("submit", async e => {
   e.preventDefault();
@@ -331,6 +338,7 @@ $("profileForm").addEventListener("submit", async e => {
     offering: { one_liner: $("p_one").value.trim(), technology: $("p_tech").value.trim(), problem: $("p_problem").value.trim(), stage_of_development: $("p_dev").value.trim() },
     funding: { target_min: num("p_min"), target_max: num("p_max"), currency: "USD", accepts_equity: $("p_equity").checked },
     market: { customers: $("p_customers").value.trim() },
+    prizes: { event_format: $("p_format").value, min_prize_usd: num("p_minprize") },
   };
   if (!profile.verticals.length || !profile.geographies.length) return msg("profileMsg", "Add at least one field and one region.", true);
   const { error } = await sb.from("profiles").upsert({ user_id: S.user.id, profile, updated_at: new Date().toISOString() });
